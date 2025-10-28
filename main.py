@@ -59,15 +59,18 @@ def main() -> None:
 
 def initialize_session_state() -> None:
     if "filter_options" not in st.session_state:
-        st.session_state.filter_options = {
-            cfg["key"]: build_filter_options(cfg["pool"], cfg["sample_size"])
-            for cfg in CATEGORY_CONFIG
-        }
+        st.session_state.filter_options = {}
+        for cfg in CATEGORY_CONFIG:
+            pool = cfg["pool"]
+            sample_count = min(cfg["sample_size"], len(pool))
+            st.session_state.filter_options[cfg["key"]] = random.sample(
+                pool, k=sample_count
+            )
 
     for cfg in CATEGORY_CONFIG:
         selection_key = f"{cfg['key']}_selection"
         if selection_key not in st.session_state:
-            st.session_state[selection_key] = []
+            st.session_state[selection_key] = None
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -75,28 +78,17 @@ def initialize_session_state() -> None:
     if "active_controls_context" not in st.session_state:
         st.session_state.active_controls_context = "system"
 
-def build_filter_options(pool: List[str], sample_size: int) -> List[str]:
-    sample_count = min(sample_size, len(pool))
-    sampled = random.sample(pool, k=sample_count)
-    return sampled
-
-
-def sanitize_selection(values: List[str], options: List[str]) -> List[str]:
-    seen: List[str] = []
-    for value in values:
-        if value in options and value not in seen:
-            seen.append(value)
-    return seen
-
-
 def reload_checklist() -> None:
     """새 체크리스트를 샘플링하고 관련 세션 상태를 초기화."""
-    st.session_state.filter_options = {
-        cfg["key"]: build_filter_options(cfg["pool"], cfg["sample_size"])
-        for cfg in CATEGORY_CONFIG
-    }
+    st.session_state.filter_options = {}
     for cfg in CATEGORY_CONFIG:
-        st.session_state[f"{cfg['key']}_selection"] = []
+        pool = cfg["pool"]
+        sample_count = min(cfg["sample_size"], len(pool))
+        st.session_state.filter_options[cfg["key"]] = random.sample(
+            pool, k=sample_count
+        )
+    for cfg in CATEGORY_CONFIG:
+        st.session_state[f"{cfg['key']}_selection"] = None
 
     for message in st.session_state.messages:
         if message.get("show_reload_button"):
@@ -115,30 +107,24 @@ def reload_checklist() -> None:
     st.session_state.active_controls_context = f"msg_{len(st.session_state.messages) - 1}"
 
 
-def render_filter_controls(_: str | None = None) -> None:
+def render_filter_controls() -> None:
     for cfg in CATEGORY_CONFIG:
         state_key = f"{cfg['key']}_selection"
         valid_options = st.session_state.filter_options[cfg["key"]]
-        initial_value = sanitize_selection(
-            list(st.session_state.get(state_key, [])), valid_options
-        )
-        st.session_state[state_key] = initial_value
+        stored_value = st.session_state.get(state_key)
+        selected_value = stored_value if stored_value in valid_options else None
+        st.session_state[state_key] = selected_value
 
-        def _on_change(key: str = state_key, cfg_key: str = cfg["key"]) -> None:
-            updated = sanitize_selection(
-                list(st.session_state.get(key, [])),
-                st.session_state.filter_options[cfg_key],
-            )
-            if updated != st.session_state[key]:
-                st.session_state[key] = updated
-
-        st.multiselect(
+        options = ["선택 안 함", *valid_options]
+        current_label = selected_value if selected_value else "선택 안 함"
+        chosen = st.selectbox(
             label=f"{cfg['label']} 조건",
-            options=valid_options,
-            key=state_key,
-            on_change=_on_change,
-            help="여러 항목을 체크할 수 있어요.",
+            options=options,
+            index=options.index(current_label),
+            key=f"{state_key}_select",
+            help="한 번에 하나만 선택할 수 있어요.",
         )
+        st.session_state[state_key] = None if chosen == "선택 안 함" else chosen
 
 def render_system_prompt() -> None:
     with st.chat_message("assistant"):
@@ -147,7 +133,7 @@ def render_system_prompt() -> None:
         )
 
         if st.session_state.active_controls_context == "system":
-            render_filter_controls("system")
+            render_filter_controls()
 
 
 def handle_user_message(user_text: str) -> None:
@@ -188,10 +174,12 @@ def get_active_filters() -> Dict[str, List[str]]:
     for cfg in CATEGORY_CONFIG:
         key = cfg["key"]
         options = st.session_state.filter_options[key]
-        selection = st.session_state.get(f"{key}_selection", [])
+        selection = st.session_state.get(f"{key}_selection")
 
-        filtered = [opt for opt in selection if opt in options]
-        active[key] = filtered if filtered else options
+        if selection in options:
+            active[key] = [selection]
+        else:
+            active[key] = options
     return active
 
 
@@ -225,8 +213,11 @@ def render_chat_history() -> None:
                 st.caption(message["caption"])
             if message["role"] == "assistant":
                 context_key = f"msg_{idx}"
-                if message.get("show_checklist_controls") and st.session_state.active_controls_context == context_key:
-                    render_filter_controls(context_key)
+                if (
+                    message.get("show_checklist_controls")
+                    and st.session_state.active_controls_context == context_key
+                ):
+                    render_filter_controls()
                 if message.get("show_reload_button"):
                     st.button(
                         "체크리스트 불러오기",
