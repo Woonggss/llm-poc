@@ -1,5 +1,5 @@
 import random
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import streamlit as st
 from rag import get_answer
@@ -100,8 +100,13 @@ def render_system_prompt() -> None:
 def handle_user_message(user_text: str) -> None:
     st.session_state.messages.append({"role": "user", "content": user_text})
 
+    selected_filters = {
+        cfg["key"] : st.session_state.get(f"{cfg['key']}_selection")
+        for cfg in CATEGORY_CONFIG
+    }
+
     with st.spinner("응답 생성 중...", show_time = True):
-        rag_answer = get_answer(user_text)
+        rag_answer, summary_stats = get_answer(user_text, selected_filters)
 
     active_filters = get_active_filters()
     filters_summary = format_filter_summary(active_filters)
@@ -116,9 +121,10 @@ def handle_user_message(user_text: str) -> None:
         "추천 결과:",
         rag_answer,
         "",
-        "추가로 알려주실 내용이 있으면 계속 입력해주세요.",
     ]
-
+    if summary_stats:
+        response_lines.append(summary_stats)
+    
     for message in st.session_state.messages:
         if message.get("show_reload_button"):
             message["show_reload_button"] = False
