@@ -4,7 +4,7 @@ from azure.search.documents import SearchClient
 from azure.core.credentials import AzureKeyCredential
 from openai import AzureOpenAI
 from azure.core.exceptions import ClientAuthenticationError, HttpResponseError
-from prompt import GROUNDED_PROMPT
+from prompt import PROMPT_INSIGHT
 
 load_dotenv()
 
@@ -42,16 +42,26 @@ def get_answer(user_text) -> str:
     except Exception as e:
         return f"알 수 없는 오류가 발생했습니다. {str(e)}"
         
-    docs = list(search_client.search(user_text, top=5, select="HotelName, Description, Tags"))
-    
+    docs = list(search_client.search(
+        search_text=user_text,
+        query_type="semantic",
+        semantic_configuration_name="review-v2-semantic-configuration",
+        top=5,
+        select=["product_name", "product_group", "gender", "age_group", "rating", "review_text"]
+    ))
+
     if not docs:
         return "관련 정보를 찾지 못했습니다."
 
     sources = "\n".join(
-            f"- {doc['HotelName']}: {doc.get('Description', '')}" for doc in docs
-        )
+        f"- {doc.get('product_name', '')} ({doc.get('product_group', '')}, "
+        f"{doc.get('gender', '')}, {doc.get('age_group', '')}) : "
+        f"{doc.get('review_text', '')}"
+        for doc in docs
+    )
+
     
-    prompt = GROUNDED_PROMPT.format(query=user_text, sources=sources)
+    prompt = PROMPT_INSIGHT.format(query=user_text, sources=sources)
     
     response = openai_client.chat.completions.create(
             model=AZURE_OPENAI_DEPLOYMENT,
