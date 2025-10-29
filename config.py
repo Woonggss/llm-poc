@@ -10,9 +10,9 @@ CATEGORY_CONFIG = [
         ],
     },
     {
-        "key": "age",
+        "key": "age_group",
         "label": "나이",
-        "sample_size": 5,
+        "sample_size": 6,
         "pool": [
             "10대",
             "20-24세",
@@ -23,17 +23,15 @@ CATEGORY_CONFIG = [
         ],
     },
     {
-        "key": "product",
+        "key": "product_group",
         "label": "제품군",
-        "sample_size": 7,
+        "sample_size": 5,
         "pool": [
             "스킨케어",
             "메이크업",
             "향수",
             "헤어케어",
-            "바디케어",
-            "남성용",
-            "라이프스타일",
+            "바디케어"
         ],
     },
 ]
