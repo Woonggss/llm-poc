@@ -2,47 +2,8 @@ import random
 from typing import Dict, List
 
 import streamlit as st
-
-
-CATEGORY_CONFIG = [
-    {
-        "key": "gender",
-        "label": "성별",
-        "sample_size": 3,
-        "pool": [
-            "여성",
-            "남성",
-            "미지정"
-        ],
-    },
-    {
-        "key": "age",
-        "label": "나이",
-        "sample_size": 5,
-        "pool": [
-            "10대",
-            "20-24세",
-            "25-29세",
-            "30대",
-            "40대",
-            "50대 이상",
-        ],
-    },
-    {
-        "key": "product",
-        "label": "제품군",
-        "sample_size": 7,
-        "pool": [
-            "스킨케어",
-            "메이크업",
-            "향수",
-            "헤어케어",
-            "바디케어",
-            "남성용",
-            "라이프스타일",
-        ],
-    },
-]
+from rag import get_answer
+from config import CATEGORY_CONFIG
 
 
 def main() -> None:
@@ -139,6 +100,9 @@ def render_system_prompt() -> None:
 def handle_user_message(user_text: str) -> None:
     st.session_state.messages.append({"role": "user", "content": user_text})
 
+    with st.spinner("응답 생성 중...", show_time = True):
+        rag_answer = get_answer(user_text)
+
     active_filters = get_active_filters()
     filters_summary = format_filter_summary(active_filters)
 
@@ -148,6 +112,9 @@ def handle_user_message(user_text: str) -> None:
         "",
         "요청해주신 내용:",
         f"> {user_text}",
+        "",
+        "추천 결과:",
+        rag_answer,
         "",
         "추가로 알려주실 내용이 있으면 계속 입력해주세요.",
     ]
