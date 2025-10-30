@@ -6,6 +6,9 @@ from openai import AzureOpenAI
 from azure.core.exceptions import ClientAuthenticationError, HttpResponseError
 from prompt import PROMPT_INSIGHT
 from typing import Dict, Optional
+from azure.search.documents.models import VectorizedQuery
+from langchain_openai import AzureOpenAIEmbeddings
+
 
 load_dotenv()
 
@@ -15,6 +18,7 @@ AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT")
 AZURE_SEARCH_INDEX_NAME = os.getenv("AZURE_SEARCH_INDEX_NAME")
+AZURE_OPENAI_EMBED_DEPLOYMENT = os.getenv("AZURE_OPENAI_EMBED_DEPLOYMENT")
 
 def get_answer(user_text: str, selected_filters: Dict[str, Optional[str]]) -> tuple:
 
@@ -59,14 +63,43 @@ def get_answer(user_text: str, selected_filters: Dict[str, Optional[str]]) -> tu
     print(filter_expression)
     print(ls_facets)
 
+    embeddings = AzureOpenAIEmbeddings(
+        azure_deployment=AZURE_OPENAI_EMBED_DEPLOYMENT,
+        openai_api_version="2024-12-01-preview",
+        azure_endpoint=AZURE_OPENAI_ENDPOINT,
+        api_key=AZURE_OPENAI_API_KEY,
+    )
+
+    # Semantic 검색 방식
+    # result = search_client.search(
+    #     search_text=user_text,
+    #     query_type="semantic",
+    #     semantic_configuration_name="review-v2-semantic-configuration",
+    #     top=5,
+    #     select=["product_name", "product_group", "gender", "age_group", "rating", "review_text"],
+    #     filter=filter_expression,
+    #     facets=ls_facets
+    # )
+
+    # Hybrid 검색 방식(Semantic 검색 + Vector 검색)
+    vector_query = VectorizedQuery(
+            vector=embeddings.embed_query(user_text),
+            k_nearest_neighbors=50,
+            fields="review_vector",
+            kind="vector",
+            exhaustive=True
+    )
+
     result = search_client.search(
-        search_text=user_text,
-        query_type="semantic",
-        semantic_configuration_name="review-v2-semantic-configuration",
-        top=5,
-        select=["product_name", "product_group", "gender", "age_group", "rating", "review_text"],
-        filter=filter_expression,
-        facets=ls_facets
+            search_text=user_text,
+            query_type="semantic",
+            semantic_configuration_name="sem-config",
+            top=50,
+            select=["product_name", "product_group", "gender", "age_group", "rating", "review_text"],
+            include_total_count=True,
+            filter=filter_expression,
+            facets=ls_facets,            
+            vector_queries=[vector_query],
     )
 
     facets = result.get_facets()
