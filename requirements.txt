@@ -110,6 +110,7 @@ azure-core==1.36.0 \
     # via
     #   azure-identity
     #   azure-search-documents
+    #   azure-storage-blob
 azure-identity==1.25.1 \
     --hash=sha256:87ca8328883de6036443e1c37b40e8dc8fb74898240f61071e09d2e369361456 \
     --hash=sha256:e9edd720af03dff020223cd269fa3a61e8f345ea75443858273bcb44844ab651
@@ -117,6 +118,10 @@ azure-identity==1.25.1 \
 azure-search-documents==11.6.0 \
     --hash=sha256:c3eb2deaf7926844e99a881830861225ef68e8b3bc067a76019e87fc7f5586dc \
     --hash=sha256:fcc807076ff82024be576ffccb0d0f3261e5c2a112a6666b86ec70bbdb2e1d64
+    # via llm-poc
+azure-storage-blob==12.27.1 \
+    --hash=sha256:65d1e25a4628b7b6acd20ff7902d8da5b4fde8e46e19c8f6d213a3abc3ece272 \
+    --hash=sha256:a1596cc4daf5dac9be115fcb5db67245eae894cf40e4248243754261f7b674a6
     # via llm-poc
 blinker==1.9.0 \
     --hash=sha256:b4ce2265a7abece45e7cc896e98dbebe6cead56bcf805a3d23136d145f5445bf \
@@ -293,6 +298,7 @@ cryptography==46.0.3 \
     --hash=sha256:f260d0d41e9b4da1ed1e0f1ce571f97fe370b152ab18778e9e8f67d6af432018
     # via
     #   azure-identity
+    #   azure-storage-blob
     #   msal
     #   pyjwt
 dataclasses-json==0.6.7 \
@@ -454,7 +460,9 @@ idna==3.11 \
 isodate==0.7.2 \
     --hash=sha256:28009937d8031054830160fce6d409ed342816b543597cece116d966c6d99e15 \
     --hash=sha256:4cd1aa0f43ca76f4a6c6c0292a85f40b35ec2e43e315b59f06e6d32171a953e6
-    # via azure-search-documents
+    # via
+    #   azure-search-documents
+    #   azure-storage-blob
 jinja2==3.1.6 \
     --hash=sha256:0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d \
     --hash=sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67
@@ -1530,6 +1538,7 @@ typing-extensions==4.15.0 \
     #   azure-core
     #   azure-identity
     #   azure-search-documents
+    #   azure-storage-blob
     #   langchain-core
     #   openai
     #   pydantic

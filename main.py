@@ -1,11 +1,12 @@
 import random
 from typing import Dict, List, Optional
 
-import streamlit as st
-import pandas as pd
 import io
-from rag import get_answer
+import pandas as pd
+import streamlit as st
 from config import CATEGORY_CONFIG
+from rag import get_answer
+from blob_storage import upload_blob_and_get_url
 
 
 def main() -> None:
@@ -147,8 +148,16 @@ def handle_user_message(user_text: str) -> None:
         df = pd.DataFrame(sources)
         buffer = io.StringIO()
         df.to_csv(buffer, index=False)
-        csv_bytes = buffer.getvalue().encode('utf-8-sig')
-        dict_message["sources_csv"] = csv_bytes
+        csv_bytes = buffer.getvalue().encode("utf-8-sig")
+        try:
+            blob_url = upload_blob_and_get_url(
+                data=csv_bytes,
+                suffix="csv",
+                content_type="text/csv; charset=utf-8",
+            )
+            dict_message["sources_url"] = blob_url
+        except Exception as exc:
+            st.warning(f"리뷰 파일 업로드에 실패했습니다: {exc}")
 
     st.session_state.messages.append(
         dict_message
@@ -209,13 +218,10 @@ def render_chat_history() -> None:
                         key=f"reload_checklist_msg_{idx}",
                         on_click=reload_checklist,
                     )
-                if message.get("sources_csv"):
-                    st.download_button(
-                        label="참고 리뷰 다운로드",
-                        data=message["sources_csv"],
-                        file_name="review_sources.csv",
-                        mime="text/csv",
-                        key=f"download_{idx}",
+                if message.get("sources_url"):
+                    st.link_button(
+                        label=f"참고 리뷰 다운로드",
+                        url=message["sources_url"],
                     )
 
 
