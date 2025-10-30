@@ -151,7 +151,7 @@ def summarize_statistics(data: dict) -> str:
     주어진 통계 데이터(facet)를 자연어로 요약하는 함수.
     예: {'gender': [{'value': '남성', 'count': 10}, ...]}
     """
-    summaries = ["**[답변 통계]**"]
+    summaries = ["### 답변 통계", f"> 선택되지 않은 조건에 대한 리뷰 분포는 다음과 같습니다. 추가 분석에 참고하세요."]
 
     for key, values in data.items():
         # 총합 및 최다 항목 계산

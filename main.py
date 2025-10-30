@@ -1,5 +1,4 @@
-import random
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import io
 import pandas as pd
@@ -14,11 +13,12 @@ def main() -> None:
     initialize_session_state()
     render_system_prompt()
 
+    render_chat_history()
+
     user_prompt = st.chat_input("메시지를 입력하세요.")
     if user_prompt:
         handle_user_message(user_prompt)
-
-    render_chat_history()
+        st.rerun()
 
 
 def initialize_session_state() -> None:
@@ -26,10 +26,7 @@ def initialize_session_state() -> None:
         st.session_state.filter_options = {}
         for cfg in CATEGORY_CONFIG:
             pool = cfg["pool"]
-            sample_count = min(cfg["sample_size"], len(pool))
-            st.session_state.filter_options[cfg["key"]] = random.sample(
-                pool, k=sample_count
-            )
+            st.session_state.filter_options[cfg["key"]] = pool
 
     for cfg in CATEGORY_CONFIG:
         selection_key = f"{cfg['key']}_selection"
@@ -47,10 +44,8 @@ def reload_checklist() -> None:
     st.session_state.filter_options = {}
     for cfg in CATEGORY_CONFIG:
         pool = cfg["pool"]
-        sample_count = min(cfg["sample_size"], len(pool))
-        st.session_state.filter_options[cfg["key"]] = random.sample(
-            pool, k=sample_count
-        )
+        st.session_state.filter_options[cfg["key"]] = pool
+    
     for cfg in CATEGORY_CONFIG:
         st.session_state[f"{cfg['key']}_selection"] = None
 
@@ -93,7 +88,9 @@ def render_filter_controls() -> None:
 def render_system_prompt() -> None:
     with st.chat_message("assistant"):
         st.markdown(
-            "안녕하세요! 아래 체크리스트에서 성별, 나이, 제품군 조건을 선택해주세요."
+            "안녕하세요! 조건에 맞는 리뷰를 기반으로, 최적의 개선 방안을 제안해드릴게요.\n\n" \
+            "아래 필터 리스트에서 분석에 활용할 성별, 나이, 제품군 조건을 먼저 고르고, 메시지를 입력해주세요.\n\n" \
+            "필터 내 옵션을 선택하지 않으면, 모든 옵션을 포함하여 요청에 답변합니다."
         )
 
         if st.session_state.active_controls_context == "system":
@@ -108,26 +105,33 @@ def handle_user_message(user_text: str) -> None:
         for cfg in CATEGORY_CONFIG
     }
 
-    with st.spinner("응답 생성 중...", show_time = True):
-        rag_answer, summary_stats, sources = get_answer(user_text, selected_filters)
+    with st.chat_message("assistant"):
+        with st.spinner("응답 생성 중...", show_time=True):
+            rag_answer, summary_stats, sources = get_answer(user_text, selected_filters)
 
     active_filters = get_active_filters()
     filters_summary = format_filter_summary(active_filters)
 
     response_lines = [
-        "선택된 조건을 기준으로 아래 요청을 검토할게요:",
+        "선택하신 조건을 바탕으로 요청을 검토했어요.",
+        "",
+        "### 선택된 필터 조건",
         filters_summary,
         "",
-        "요청해주신 내용:",
+        "### 요청 내용",
         f"> {user_text}",
         "",
-        "추천 결과:",
-        rag_answer,
+        "### 답변 내용",
         "",
+        "> 요약 인사이트, 분석 포인트, 추가 제안을 아래와 같이 정리했어요.",
+        rag_answer,
+        ""
     ]
     if summary_stats:
         response_lines.append(summary_stats)
-    
+
+    response_lines.append("\n\n 새롭게 필터 옵션을 설정하거나, 답변에 참고한 리뷰를 다운로드할 수 있어요.")
+
     for message in st.session_state.messages:
         if message.get("show_reload_button"):
             message["show_reload_button"] = False
@@ -212,18 +216,31 @@ def render_chat_history() -> None:
                     and st.session_state.active_controls_context == context_key
                 ):
                     render_filter_controls()
-                if message.get("show_reload_button"):
+                
+                show_reload = message.get("show_reload_button")
+                sources_url = message.get("sources_url")
+
+                if show_reload and sources_url:
                     st.button(
-                        "체크리스트 불러오기",
+                        "필터 리스트 불러오기",
                         key=f"reload_checklist_msg_{idx}",
                         on_click=reload_checklist,
                     )
-                if message.get("sources_url"):
                     st.link_button(
-                        label=f"참고 리뷰 다운로드",
-                        url=message["sources_url"],
+                        "참고 리뷰 다운로드",
+                        sources_url,
                     )
-
+                elif show_reload:
+                    st.button(
+                        "필터 리스트 불러오기",
+                        key=f"reload_checklist_msg_{idx}",
+                        on_click=reload_checklist,
+                    )
+                elif sources_url:
+                    st.link_button(
+                        label="참고 리뷰 다운로드",
+                        url=sources_url,
+                    )
 
 if __name__ == "__main__":
     main()
