@@ -2,6 +2,8 @@ import random
 from typing import Dict, List, Optional
 
 import streamlit as st
+import pandas as pd
+import io
 from rag import get_answer
 from config import CATEGORY_CONFIG
 
@@ -106,7 +108,7 @@ def handle_user_message(user_text: str) -> None:
     }
 
     with st.spinner("응답 생성 중...", show_time = True):
-        rag_answer, summary_stats = get_answer(user_text, selected_filters)
+        rag_answer, summary_stats, sources = get_answer(user_text, selected_filters)
 
     active_filters = get_active_filters()
     filters_summary = format_filter_summary(active_filters)
@@ -133,13 +135,23 @@ def handle_user_message(user_text: str) -> None:
 
     st.session_state.active_controls_context = None
 
+    
+    dict_message = {
+        "role": "assistant",
+        "content": "\n".join(line for line in response_lines if line is not None),
+        "show_reload_button": True,
+        "show_checklist_controls": False
+    }
+
+    if sources:
+        df = pd.DataFrame(sources)
+        buffer = io.StringIO()
+        df.to_csv(buffer, index=False)
+        csv_bytes = buffer.getvalue().encode('utf-8-sig')
+        dict_message["sources_csv"] = csv_bytes
+
     st.session_state.messages.append(
-        {
-            "role": "assistant",
-            "content": "\n".join(line for line in response_lines if line is not None),
-            "show_reload_button": True,
-            "show_checklist_controls": False,
-        }
+        dict_message
     )
 
 def get_active_filters() -> Dict[str, List[str]]:
@@ -196,6 +208,14 @@ def render_chat_history() -> None:
                         "체크리스트 불러오기",
                         key=f"reload_checklist_msg_{idx}",
                         on_click=reload_checklist,
+                    )
+                if message.get("sources_csv"):
+                    st.download_button(
+                        label="참고 리뷰 다운로드",
+                        data=message["sources_csv"],
+                        file_name="review_sources.csv",
+                        mime="text/csv",
+                        key=f"download_{idx}",
                     )
 
 

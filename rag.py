@@ -39,13 +39,13 @@ def get_answer(user_text: str, selected_filters: Dict[str, Optional[str]]) -> tu
                                     credential=search_credential)
     
     except ClientAuthenticationError as auth_error:
-        return f"인증 오류가 발생했습니다. API 키와 엔드포인트를 확인하세요. {str(auth_error)}", None
+        return f"인증 오류가 발생했습니다. API 키와 엔드포인트를 확인하세요. {str(auth_error)}", None, None
 
     except HttpResponseError as http_error:
-        return f"HTTP 응답 오류가 발생했습니다. {str(http_error)}", None
+        return f"HTTP 응답 오류가 발생했습니다. {str(http_error)}", None, None
 
     except Exception as e:
-        return f"알 수 없는 오류가 발생했습니다. {str(e)}", None
+        return f"알 수 없는 오류가 발생했습니다. {str(e)}", None, None
     
     ls_filter = [
         f"{field} eq '{value}'"
@@ -107,14 +107,25 @@ def get_answer(user_text: str, selected_filters: Dict[str, Optional[str]]) -> tu
     
     docs = list(result)
     if not docs:
-        return "관련 정보를 찾지 못했습니다.", None
+        return "관련 정보를 찾지 못했습니다.", None, None
 
-    sources = "\n".join(
-        f"- {doc.get('product_name', '')} ({doc.get('product_group', '')}, "
-        f"{doc.get('gender', '')}, {doc.get('age_group', '')}) : "
-        f"{doc.get('review_text', '')}"
+    # sources = "\n".join(
+    #     f"- {doc.get('product_name', '')} ({doc.get('product_group', '')}, "
+    #     f"{doc.get('gender', '')}, {doc.get('age_group', '')}) : "
+    #     f"{doc.get('review_text', '')}"
+    #     for doc in docs
+    # )
+
+    sources = [
+        {
+            "product_name": doc.get("product_name", ""),
+            "product_group": doc.get("product_group", ""),
+            "gender": doc.get("gender", ""),
+            "age_group": doc.get("age_group", ""),
+            "review_text": doc.get("review_text", "")
+        } 
         for doc in docs
-    )
+    ]
 
     print(sources)
 
@@ -132,7 +143,7 @@ def get_answer(user_text: str, selected_filters: Dict[str, Optional[str]]) -> tu
     
     rag_answer = response.choices[0].message.content
     
-    return rag_answer, summarize_statistics(facets) if facets else None
+    return rag_answer, summarize_statistics(facets) if facets else None, sources
 
 
 def summarize_statistics(data: dict) -> str:
