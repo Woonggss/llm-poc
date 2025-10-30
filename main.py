@@ -4,8 +4,8 @@ import io
 import pandas as pd
 import streamlit as st
 from config import CATEGORY_CONFIG
-from rag import get_answer
-from blob_storage import upload_blob_and_get_url
+from llm.rag import get_answer
+from util.blob_storage import upload_blob_and_get_url
 
 
 def main() -> None:

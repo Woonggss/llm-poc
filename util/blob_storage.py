@@ -8,15 +8,8 @@ from azure.storage.blob import (
     ContentSettings,
     generate_blob_sas,
 )
-from dotenv import load_dotenv
+from config import AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_KEY, AZURE_STORAGE_CONTAINER, AZURE_STORAGE_ENDPOINT
 
-
-load_dotenv()
-
-AZURE_STORAGE_ACCOUNT = os.getenv("AZURE_STORAGE_ACCOUNT")
-AZURE_STORAGE_KEY = os.getenv("AZURE_STORAGE_KEY")
-AZURE_STORAGE_CONTAINER = os.getenv("AZURE_STORAGE_CONTAINER")
-AZURE_STORAGE_ENDPOINT = os.getenv("AZURE_STORAGE_ENDPOINT")
 
 _container_client = None
 
